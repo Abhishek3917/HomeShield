@@ -1,0 +1,77 @@
+version: "3.9"
+
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+services:
+  # WireGuard Easy
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:latest
+    container_name: wg-easy
+
+    environment:
+      WG_HOST: ${SERVER_IP}
+      PASSWORD_HASH: ${WEB_PASSWORD_HASH}
+
+      # VPN clients will use AdGuard as DNS
+      PEER_DNS: 172.30.0.3
+
+      # VPN subnet (NOT Docker subnet)
+      WG_DEFAULT_ADDRESS: 10.8.0.x
+
+      WG_ENABLE_IPV6: "false"
+      INSECURE: "true"
+
+    volumes:
+      - ./wireguard:/etc/wireguard
+
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+
+    restart: unless-stopped
+
+    networks:
+      backend:
+        ipv4_address: 172.30.0.2
+
+  # AdGuard Home
+  adguard:
+    image: adguard/adguardhome:latest
+    container_name: adguard
+
+    environment:
+      TZ: ${SERVER_TZ}
+
+    volumes:
+      - ./adguard-config:/opt/adguardhome/conf
+      - ./adguard-work:/opt/adguardhome/work
+
+    ports:
+      # Initial setup
+      - "3000:3000/tcp"
+
+      # Dashboard
+      - "8080:80/tcp"
+
+      # DNS (optional if you want LAN devices to use AdGuard)
+      - "53:53/tcp"
+      - "53:53/udp"
+
+    restart: unless-stopped
+
+    networks:
+      backend:
+        ipv4_address: 172.30.0.3
