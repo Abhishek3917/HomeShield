@@ -1,4 +1,3 @@
-version: "3.9"
 
 networks:
   backend:
@@ -18,7 +17,7 @@ services:
       PASSWORD_HASH: ${WEB_PASSWORD_HASH}
 
       # VPN clients will use AdGuard as DNS
-      PEER_DNS: 172.30.0.3
+      WG_DEFAULT_DNS: 192.168.220.41
 
       # VPN subnet (NOT Docker subnet)
       WG_DEFAULT_ADDRESS: 10.8.0.x
