@@ -32,7 +32,7 @@ export const signup = async (req,res)=>{
             // gen token
             await newUser.save()
             generateToken(newUser._id,res)
-            return res.status(200).json({
+            return res.status(201).json({
                         _id:newUser._id,
                         email:newUser.email,            
                     })
@@ -47,7 +47,7 @@ export const signup = async (req,res)=>{
         res.status(500).json({message:"Internal server Error"})
     }
 }
-
+// login
 export const login = async(req,res)=>{
     try {
         const {email,password} = req.body
@@ -56,9 +56,9 @@ export const login = async(req,res)=>{
         if(!user){
             return res.status(400).json({message:"invalid credentials"})
         }
-        const passwordverify = await bcrypt.compare(password,user.password)
+        const isPasswordValid = await bcrypt.compare(password,user.password)
 
-        if(!passwordverify){
+        if(!isPasswordValid){
             return res.status(400).json({message:"invalid credentials"})
         }
 
@@ -74,7 +74,7 @@ export const login = async(req,res)=>{
         
     }
 }
-
+// logout
 export const logout = async(req,res)=>{
     try {
         res.cookie("jwt","",{maxAge:0})
@@ -82,5 +82,32 @@ export const logout = async(req,res)=>{
     } catch (error) {
         console.log("Error in logoutcontroller",error.message)
         res.status(500).json({message:"Internal server Error"})   
+    }
+}
+// check
+export const sessionAuth = async(req,res) =>{
+    try {
+        res.status(200).json(req.user)
+    } catch (error) {
+        console.log("Error in checkAuth",error.message)
+        res.status(500).json({message:"Internal error"})
+    }
+}
+
+export const terminate = async(req,res) =>{
+    try {
+        const user = req.user
+        const result = await User.deleteOne({_id:user._id})
+
+        if(result.deletedCount === 0 ){
+            return res.status(400).json({message:"user not found"})
+
+        }
+        else{
+            return res.status(200).json({message: "Account deleted successfully"});
+        }
+    } catch (error) {
+        res.status(500).json({message:"internal server error"})
+        console.log("error occured on terminate function")
     }
 }
