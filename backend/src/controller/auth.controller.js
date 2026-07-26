@@ -1,66 +1,35 @@
 import User from '../model/auth.model.js'
-import bcrypt from 'bcryptjs'
 import { generateToken } from '../lib/utility.js'
+import { loginService, signupService, terminateService } from '../services/auth.services.js'
+import AppError from '../lib/AppError.js';
 
 // signup 
-export const signup = async (req,res)=>{
+export const signup = async (req, res, next) => {
     try {
-        const {email,password}=req.body
-        if(!email || !password){
-            return res.status(400).json({message:"all feilds are required"}) 
-        }
-
-        if(password.length<6){
-            return res.status(400).json({message:"password have min 6 length "}) 
-        }
-
-        const user = await User.findOne({email})
-
-        if (user){
-            return res.status(400).json({message:"email is already registered"})
-        }
-
-        const salt = await bcrypt.genSalt(10)
-        const hashpassword = await bcrypt.hash(password,salt)
-
-        const newUser = new User({
+        const { email, password } = req.body;
+        
+        const user = await signupService({
             email,
-            password:hashpassword
-        })
+            password,
+        });
+        generateToken(user._id, res);
 
-        if(newUser){
-            // gen token
-            await newUser.save()
-            generateToken(newUser._id,res)
-            return res.status(201).json({
-                        _id:newUser._id,
-                        email:newUser.email,            
-                    })
-            
-        }
-        else{
-            res.status(400).json({message:"invalid user data"})
-        }
+        return res.status(201).json({
+            _id: user._id,
+            email: user.email,
+        });
 
     } catch (error) {
-        console.log("Error in signupcontroller",error.message)
-        res.status(500).json({message:"Internal server Error"})
+        next(error);
     }
-}
+};
+
 // login
-export const login = async(req,res)=>{
+export const login = async(req,res,next)=>{
     try {
         const {email,password} = req.body
-        const user = await User.findOne({email})
 
-        if(!user){
-            return res.status(400).json({message:"invalid credentials"})
-        }
-        const isPasswordValid = await bcrypt.compare(password,user.password)
-
-        if(!isPasswordValid){
-            return res.status(400).json({message:"invalid credentials"})
-        }
+        const user = await loginService({email,password})
 
         generateToken(user._id,res)
         res.status(200).json({
@@ -69,45 +38,41 @@ export const login = async(req,res)=>{
         })
 
     } catch (error) {
-        console.log("Error in logincontroller",error.message)
-        return res.status(500).json({message:"internal server error"})
+        next(error)
         
     }
 }
 // logout
-export const logout = async(req,res)=>{
+export const logout = async(req,res,next)=>{
     try {
         res.cookie("jwt","",{maxAge:0})
         res.status(200).json({message:"logged out succesfully"})
     } catch (error) {
-        console.log("Error in logoutcontroller",error.message)
-        res.status(500).json({message:"Internal server Error"})   
+        next(error)
     }
 }
 // check
-export const sessionAuth = async(req,res) =>{
+export const sessionAuth = async(req,res,next) =>{
     try {
         res.status(200).json(req.user)
     } catch (error) {
-        console.log("Error in checkAuth",error.message)
-        res.status(500).json({message:"Internal error"})
+        next(error)
     }
 }
 
-export const terminate = async(req,res) =>{
+// delete
+export const terminate = async(req,res,next) =>{
     try {
-        const user = req.user
-        const result = await User.deleteOne({_id:user._id})
+        const result = await terminateService({user:req.user})
 
         if(result.deletedCount === 0 ){
-            return res.status(400).json({message:"user not found"})
-
+            throw AppError.badRequest("user not found")
         }
         else{
             return res.status(200).json({message: "Account deleted successfully"});
         }
     } catch (error) {
-        res.status(500).json({message:"internal server error"})
-        console.log("error occured on terminate function")
+        next(error)
     }
 }
+

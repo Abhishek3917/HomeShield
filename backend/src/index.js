@@ -1,17 +1,18 @@
 
 import express from "express"
-import dotenv from 'dotenv'
 import authRoutes from './routes/auth.routes.js'
-import { connectDB } from "./lib/db.js"
+import { connectDB } from "./config/db.js"
 import cookieParser from "cookie-parser"
+import './config/env.js'
+import { errorHandler } from "./middleware/Error.middleware.js"
 
-dotenv.config()
 
 const app = express()
 
 app.use(express.json())
 app.use(cookieParser())
 app.use("/api/auth",authRoutes)
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 
