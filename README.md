@@ -8,7 +8,7 @@ HomeShield is an open-source project that aims to simplify secure remote access 
 
 ---
 
-## Features
+## Feature
 
 ### ✅ Implemented
 
